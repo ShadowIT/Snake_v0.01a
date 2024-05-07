@@ -1,6 +1,8 @@
 ﻿// Snake_v0.01a.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
 
+#define DEBUG // Убрать по готовности
+
 #include <iostream>
 #include <Windows.h>
 #include <vector>
@@ -14,7 +16,7 @@ COORD _POSITION = { 0, 0 };
 HANDLE _HCONSOLE = GetStdHandle(STD_OUTPUT_HANDLE);
 CONSOLE_CURSOR_INFO structCursorInfo;
 
-static size_t BoardPositionX = 0;
+static size_t BoardPositionX = 1;
 static size_t BoardPositionY = 0;
 static size_t BoardWidth = 50;
 static size_t BoardHeight = 25;
@@ -33,7 +35,7 @@ public:
         //set(5, 5, 1);
     }
     void show_debug() {        
-        gotoxy(pos_x + 55, pos_y);
+        gotoxy(pos_x + BoardWidth + 15, pos_y);
         size_t i = 0;
         size_t offset = 0;
         for (auto cell : iboard) {
@@ -41,7 +43,7 @@ public:
             ++i;
             if (i == width) {
                 ++offset;
-                gotoxy(pos_x + 55, pos_y + offset);
+                gotoxy(pos_x + BoardWidth + 15, pos_y + offset);
                 i = 0;
             }
         }
@@ -73,6 +75,12 @@ public:
             case 6:
                 cout << (char)188;
                 break;
+            case 7:
+                cout << '@';
+                break;
+            case 8:
+                cout << '*';
+                break;
             default:
                 break;
             }
@@ -84,6 +92,9 @@ public:
                 i = 0;
             }
         }
+    }
+    void set_value(size_t col, size_t row, int value) {
+        set(row, col, value);
     }
 private:
     void init() {
@@ -109,10 +120,10 @@ private:
 
     }
     void set(size_t row, size_t col, int value) {
-        iboard[(row - 1) * 10 + (col - 1)] = value;
+        iboard[(row - 1) * width + (col - 1)] = value;
     }
-    int pos_x;
-    int pos_y;
+    size_t pos_x;
+    size_t pos_y;
     vector<int> iboard;
     size_t width;
     size_t height;
@@ -120,9 +131,114 @@ private:
 
 class Snake {
 public:
-    Snake(size_t _x, size_t _y) 
-        : pos_x(_x), pos_y(_y), length(1) {
+    Snake(size_t _x, size_t _y, GameBoard& _refBoard) 
+        : pos_x(_x), pos_y(_y), length(1), refBoard(_refBoard) {
 
+    }
+    void move_up() {
+        if (check_top_board()) {
+            hide();            
+            --pos_y;
+            show();
+        }
+    }
+    void move_down() {
+        if (check_down_board()) {
+            hide();
+            ++pos_y;
+            show();
+        }
+    }
+    void move_right() {
+        if (check_right_board()) {
+            hide();
+            ++pos_x;
+            show();
+        }
+    }
+    void move_left() {
+        if (check_left_board()) {
+            hide();
+            --pos_x;
+            show();
+        }
+    }
+    void spawn() {
+#ifndef DEBUG
+        Beep(600, 100);
+        Beep(500, 100);
+#endif  
+        show();
+    }
+    size_t get_posX() {
+        return pos_x;
+    }
+    size_t get_posY() {
+        return pos_y;
+    }
+private:
+    void show() {
+        refBoard.set_value(pos_x, pos_y, 7);
+        refBoard.show();
+#ifdef DEBUG
+        refBoard.show_debug();
+#endif
+    }
+    void hide() {
+        refBoard.set_value(pos_x, pos_y, 0);
+    }
+    bool check_left_board() {
+        if (pos_x != (BoardPositionX + 2)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    bool check_right_board() {
+        if (pos_x != (BoardPositionX + BoardWidth - 1)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    bool check_top_board() {
+        if (pos_y != (BoardPositionY + 2)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    bool check_down_board() {
+        if (pos_y != (BoardPositionY + BoardHeight - 1)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    size_t pos_x;
+    size_t pos_y;
+    vector<int> ifig;
+    size_t length;
+    GameBoard& refBoard;
+};
+
+struct Tail {
+    size_t pos_x = 0;
+    size_t pos_y = 0;
+};
+
+class TSnake {
+public:
+    TSnake(size_t _x, size_t _y, GameBoard& _refBoard)
+        : pos_x(_x), pos_y(_y), length(4), refBoard(_refBoard) {
+        for (size_t i = 1; i != length; ++i) {
+            Tail tail{ pos_x + i, pos_y };
+            tvec.push_back(tail);
+        }
     }
     void move_up() {
         if (check_top_board()) {
@@ -153,19 +269,35 @@ public:
         }
     }
     void spawn() {
+#ifndef DEBUG
+        Beep(600, 100);
+        Beep(500, 100);
+#endif  
         show();
+    }
+    size_t get_posX() {
+        return pos_x;
+    }
+    size_t get_posY() {
+        return pos_y;
     }
 private:
     void show() {
-        gotoxy(pos_x, pos_y);
-        cout << '@';
+        //refBoard.set_value(pos_x, pos_y, 7);
+        for(auto c : tvec) {
+            refBoard.set_value(c.pos_x, c.pos_y, 7);
+        }
+        refBoard.show();
+#ifdef DEBUG
+        refBoard.show_debug();
+#endif
     }
     void hide() {
-        gotoxy(pos_x, pos_y);
-        cout << ' ';
+        //auto it_bgn = tvec.begin();
+        refBoard.set_value((tvec.end() - 1)[0].pos_x, pos_y, 0);
     }
     bool check_left_board() {
-        if (pos_x != (BoardPositionX + 1)) {
+        if (pos_x != (BoardPositionX + 2)) {
             return true;
         }
         else {
@@ -173,7 +305,7 @@ private:
         }
     }
     bool check_right_board() {
-        if (pos_x != (BoardPositionX + BoardWidth - 2)) {
+        if (pos_x != (BoardPositionX + BoardWidth - 1)) {
             return true;
         }
         else {
@@ -181,7 +313,7 @@ private:
         }
     }
     bool check_top_board() {
-        if (pos_y != (BoardPositionY + 1)) {
+        if (pos_y != (BoardPositionY + 2)) {
             return true;
         }
         else {
@@ -189,21 +321,89 @@ private:
         }
     }
     bool check_down_board() {
-        if (pos_y != (BoardPositionY + BoardHeight - 2)) {
+        if (pos_y != (BoardPositionY + BoardHeight - 1)) {
             return true;
         }
         else {
             return false;
         }
     }
-    int pos_x;
-    int pos_y;
-    vector<int> ifig;
+    size_t pos_x;
+    size_t pos_y;
+public:
+    vector<Tail> tvec;
     size_t length;
+    GameBoard& refBoard;
+    
 };
+
+class Food {
+public:
+    Food(GameBoard& _refBoard, Snake& _refSnake) 
+        : refBoard(_refBoard), refSnake(_refSnake), pos_x(0), pos_y(0) {
+        start_X = BoardPositionX + 2;
+        end_X = BoardPositionX + BoardWidth - 2;
+        start_Y = BoardPositionY + 2;
+        end_Y = BoardPositionY + BoardHeight - 2;
+    }
+    Food(size_t _x, size_t _y, GameBoard& _refBoard, Snake& _refSnake)
+        : pos_x(_x), pos_y(_y), refBoard(_refBoard), refSnake(_refSnake) {
+    }
+    void spawn() {
+        do {
+            pos_x = rand() % (end_X - start_X) + start_X;
+            pos_y = rand() % (end_Y - start_Y) + start_Y;
+        } while (check_collision());
+        show();
+    }
+    void eat() {
+#ifndef DEBUG
+        Beep(500, 50);
+#endif
+        ++counter;
+        gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
+        cout << "Counter: " << counter;
+    }
+    bool check_collision() {
+        if (refSnake.get_posX() == pos_x && refSnake.get_posY() == pos_y) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    int get_cnt() {
+        return counter;
+    }
+private:
+    void show() {
+        refBoard.set_value(pos_x, pos_y, 8);
+        refBoard.show();
+#ifdef DEBUG
+        refBoard.show_debug();
+#endif
+    }
+    void hide() {
+        refBoard.set_value(pos_x, pos_y, 0);
+    }
+    //char symbol = '*';
+    size_t start_X;
+    size_t end_X;
+    size_t start_Y;
+    size_t end_Y;
+    size_t pos_x;
+    size_t pos_y;
+    GameBoard& refBoard;
+    Snake& refSnake;
+    static size_t counter;
+};
+
+size_t Food::counter = 0;
 
 int main()
 {
+
+    srand(time(0));
     
     GetConsoleCursorInfo(_HCONSOLE, &structCursorInfo); // 
     structCursorInfo.bVisible = FALSE;                  // 
@@ -212,15 +412,27 @@ int main()
     GameBoard snakeBoard(BoardPositionX, BoardPositionY, BoardWidth, BoardHeight);
 
     snakeBoard.show();
+#ifdef DEBUG
     snakeBoard.show_debug();
+#endif
+    GameBoard& refBoard = snakeBoard;
 
-    Snake snake(5, 5);
+    TSnake snake(5, 5, refBoard);
 
-    snake.spawn();
-
+    TSnake& refSnake = snake;
+    //Food apple(refBoard, snake);
+    snake.spawn();    
+    //apple.spawn();
     char key = ' ';
+    
+    gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
+    //cout << "Counter: " << apple.get_cnt();
 
     while (true) {
+       /* if (apple.check_collision()) {
+            apple.eat();
+            apple.spawn();
+        }*/
         while (!_kbhit()) {
 
         }
