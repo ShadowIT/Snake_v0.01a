@@ -4,6 +4,8 @@
 //#define DEBUG // Убрать по готовности
 //#define MENU
 
+// Исправить check_right() по аналогии с check_left()
+
 // + Сделать snake параметр скорости Speed вместо прямой задержки Latency
 // + Добавить заголовки в меню
 // + Добавить описание настройки в меню Settings
@@ -13,6 +15,8 @@
 // Рефакторинг кода
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <Windows.h>
 #include <vector>
 #include <conio.h>
@@ -269,6 +273,10 @@ public:
     void set_value(size_t col, size_t row, int value) {
         set(row, col, value);
     }
+    void end_of_round() {
+        gotoxy(BoardPositionX + (BoardWidth / 2) - 5, BoardPositionY + (BoardHeight / 2) - 1);
+        cout << "GAME OVER";
+    }
 private:
     Board init() {
         for (size_t i = 0; i != (width * height); ++i) {
@@ -306,28 +314,28 @@ public:
 
     }
     void move_up() {
-        if (check_top_board()) {
+        if (check_top()) {
             hide();            
             --pos_y;
             show();
         }
     }
     void move_down() {
-        if (check_down_board()) {
+        if (check_down()) {
             hide();
             ++pos_y;
             show();
         }
     }
     void move_right() {
-        if (check_right_board()) {
+        if (check_right()) {
             hide();
             ++pos_x;
             show();
         }
     }
     void move_left() {
-        if (check_left_board()) {
+        if (check_left()) {
             hide();
             --pos_x;
             show();
@@ -357,7 +365,7 @@ private:
     void hide() {
         refBoard.set_value(pos_x, pos_y, 0);
     }
-    bool check_left_board() {
+    bool check_left() {
         if (pos_x != (BoardPositionX + 2)) {
             return true;
         }
@@ -365,7 +373,7 @@ private:
             return false;
         }
     }
-    bool check_right_board() {
+    bool check_right() {
         if (pos_x != (BoardPositionX + BoardWidth - 1)) {
             return true;
         }
@@ -373,7 +381,7 @@ private:
             return false;
         }
     }
-    bool check_top_board() {
+    bool check_top() {
         if (pos_y != (BoardPositionY + 2)) {
             return true;
         }
@@ -381,7 +389,7 @@ private:
             return false;
         }
     }
-    bool check_down_board() {
+    bool check_down() {
         if (pos_y != (BoardPositionY + BoardHeight - 1)) {
             return true;
         }
@@ -405,33 +413,40 @@ struct SnakeElement {
 class TSnake {
 public:
     TSnake(size_t _x, size_t _y, GameBoard& _refBoard)
-        : length(3), refBoard(_refBoard) {
+        : length(5), refBoard(_refBoard) {
         //snake.push_back(head);
         /*snake.push_back({ '#', head.pos_x + 1, head.pos_y });
         snake.push_back({ '#', head.pos_x + 2, head.pos_y });
         snake.push_back({ '#', head.pos_x + 3, head.pos_y });*/
-        for (size_t i = 1; i <= length; ++i) {
-            snake.push_back({ '#', head.pos_x + i, head.pos_y });
-        }
-        latency = 1000 / speed;
+        create();
     }
     TSnake grow() {
         ++length;
         auto _bgn = snake.begin();
         auto _end = snake.end();
+        size_t ins_x = 0;
+        size_t ins_y = 0;
         switch (direction)
         {
         case 1:
-            head.pos_x - 1;
+            /*ins_x = head.pos_x - 1;
+            ins_y = head.pos_y;*/
+            //head.pos_x - 1;
             break;
         case 2:
-            head.pos_y - 1;
+            /*ins_x = head.pos_x;
+            ins_y = head.pos_y - 1;*/
+            //head.pos_y - 1;
             break;
         case 3:
-            head.pos_x + 1;
+            /*ins_x = head.pos_x + 1;
+            ins_y = head.pos_y;*/
+            //head.pos_x + 1;
             break;
         case 4:
-            head.pos_y + 1;
+           /* ins_x = head.pos_x;
+            ins_y = head.pos_y + 1;*/
+            //head.pos_y + 1;
             break;
         default:
             break;
@@ -445,8 +460,17 @@ public:
     size_t get_posY() {
         return head.pos_y;
     }
+    void create() {
+        head = { '#', BoardPositionX + BoardWidth / 2, BoardPositionY + BoardHeight / 2 };
+        snake.clear();
+        for (size_t i = 1; i <= length; ++i) {
+            snake.push_back({ '#', head.pos_x + i, head.pos_y });
+        }
+        alive = true;
+        latency = 1000 / speed;
+    }
     void move_up() {
-        if (check_top_board()) {
+        if (check_top()) {
             move();
             --head.pos_y;
             show();
@@ -455,7 +479,7 @@ public:
         }
     }
     void move_down() {
-        if (check_down_board()) {
+        if (check_down()) {
             move();
             ++head.pos_y;
             show();
@@ -464,7 +488,7 @@ public:
         }
     }
     void move_right() {
-        if (check_right_board()) {
+        if (check_right()) {
             move();
             ++head.pos_x;
             show();
@@ -473,16 +497,34 @@ public:
         }
     }
     void move_left() {
-        if (check_left_board()) {
+        if (check_left()) {
             move();
             --head.pos_x;
             show();
             direction = 1;
             Sleep(latency);
         }
+        else {
+            head.pos_x;
+        }
     }
     void spawn() {
         show();
+    }
+    void kill() {
+        hide();
+        //snake = {};
+        /*for (auto& c : snake) {
+            c = { ' ', 0, 0 };
+        }*/
+        /*for (size_t i = 1; i <= length; ++i) {
+            snake.push_back({ '#', head.pos_x + i, head.pos_y });
+        }*/
+        /*head.pos_x = BoardPositionX + BoardWidth / 2;
+        head.pos_y = BoardPositionY + BoardHeight / 2;*/
+        /*head.pos_x = 0;
+        head.pos_y = 0;*/
+        alive = false;
     }
     void move() {
         auto _bgn = snake.begin();
@@ -496,8 +538,14 @@ public:
         (*_bgn).pos_x = head.pos_x;
         (*_bgn).pos_y = head.pos_y;
     }
+    void spawn_XY(size_t _x, size_t _y) {
+        head.pos_x = _x;
+        head.pos_y = _y;
+        for (size_t i = 1; i <= length; ++i) {
+            snake.push_back({ '#', head.pos_x + i, head.pos_y });
+        }
+    }
     void GO() {
-
         switch (direction)
         {
         case 1:
@@ -522,7 +570,7 @@ public:
         
     }
     bool check_all_collision() {
-        if (check_left_board() || check_right_board() || check_top_board() || check_down_board() || check_tail_collision()) {
+        if(check_left_board() && check_right_board() && check_top_board() && check_down_board() && check_tail_collision() && alive) {
             return true;
         }
         else {
@@ -530,9 +578,10 @@ public:
         }
     }
     vector<SnakeElement> snake;
-    SnakeElement head{ '#', BoardWidth / 2, BoardHeight / 2 };
+    SnakeElement head;
     size_t length;
     GameBoard& refBoard;
+    bool alive;
     
     int get_speed() {
         return speed;
@@ -548,27 +597,46 @@ private:
             refBoard.set_value(c.pos_x, c.pos_y, 7);
         }
         refBoard.show();
+        //alive = true;
 #ifdef DEBUG
         refBoard.show_debug();
 #endif
     }
     void hide() {
+        refBoard.set_value(head.pos_x, head.pos_y, 0);
+        for (auto& c : snake) {
+            refBoard.set_value(c.pos_x, c.pos_y, 0);
+        }
+        refBoard.show();
         //auto it_bgn = tvec.begin();
         //refBoard.set_value((tvec.end() - 1)[0].pos_x, pos_y, 0);
     }
-    bool check_tail_collision() {
-        for (auto c : snake) {
-            if (head.pos_x != c.pos_x && head.pos_y != c.pos_y) {
-                return true;
+    bool check_tail_collision() {   // Check conflict with tail
+        bool collision = true;
+        bool thow_first_fl = true;  // Throw firs element of tail for non collision in grow
+        for (auto& c : snake) {
+            if (thow_first_fl) {
+                thow_first_fl = false;
+                continue;
+            }
+            if ((head.pos_x) == c.pos_x && head.pos_y == c.pos_y) {
+                collision = false;
+                break;
             }
             else {
-                return false;
+                collision = true;
             }
         }
+        return collision;
     }
-    bool check_left_board() {
+    bool check_left() {
         bool collision = true;
-        for (auto c : snake) {
+        bool thow_first_fl = true;
+        for (auto& c : snake) {
+            if (thow_first_fl) {
+                thow_first_fl = false;
+                continue;
+            }
             if ((head.pos_x - 1) == c.pos_x && head.pos_y == c.pos_y) {
                 collision = false;
                 break;
@@ -577,15 +645,15 @@ private:
                 collision = true;
             }
         }
-        if ((head.pos_x != (BoardPositionX + 2)) && ((head.pos_x - 1) != snake[0].pos_x) && collision) {
+        if ((head.pos_x != (BoardPositionX)) && ((head.pos_x - 1) != snake[0].pos_x) && check_tail_collision()) {
             return true;
         }
         else {
             return false;
         }
     }
-    bool check_right_board() {
-        bool collision = true;
+    bool check_right() {
+        /*bool collision = true;
         for (auto c : snake) {
             if ((head.pos_x + 1) == c.pos_x && head.pos_y == c.pos_y) {
                 collision = false;
@@ -594,16 +662,16 @@ private:
             else {
                 collision = true;
             }
-        }
-        if ((head.pos_x != (BoardPositionX + BoardWidth - 2)) && ((head.pos_x + 1) != snake[0].pos_x) && collision) {
+        }*/
+        if ((head.pos_x != (BoardPositionX + BoardWidth - 1)) && ((head.pos_x + 1) != snake[0].pos_x) && check_tail_collision()) {
             return true;
         }
         else {
             return false;
         }
     }
-    bool check_top_board() {
-        bool collision = true;
+    bool check_top() {
+        /*bool collision = true;
         for (auto c : snake) {
             if ((head.pos_y - 1) == c.pos_y && head.pos_x == c.pos_x) {
                 collision = false;
@@ -612,16 +680,16 @@ private:
             else {
                 collision = true;
             }
-        }
-        if ((head.pos_y != (BoardPositionY + 2)) && ((head.pos_y - 1) != snake[0].pos_y) && collision) {
+        }*/
+        if ((head.pos_y != (BoardPositionY + 1)) && ((head.pos_y - 1) != snake[0].pos_y) && check_tail_collision()) {
             return true;
         }
         else {
             return false;
         }
     }
-    bool check_down_board() {
-        bool collision = true;
+    bool check_down() {
+        /*bool collision = true;
         for (auto c : snake) {
             if ((head.pos_y + 1) == c.pos_y && head.pos_x == c.pos_x) {
                 collision = false;
@@ -630,14 +698,53 @@ private:
             else {
                 collision = true;
             }
-        }
-        if (head.pos_y != (BoardPositionY + BoardHeight - 1) && ((head.pos_y + 1) != snake[0].pos_y) && collision) {
+        }*/
+        if (head.pos_y != (BoardPositionY + BoardHeight - 0) && ((head.pos_y + 1) != snake[0].pos_y) && check_tail_collision()) {
             return true;
         }
         else {
             return false;
         }
     }
+    bool check_left_board() {
+        bool collision = true;
+        if (head.pos_x == (BoardPositionX)) {
+            gotoxy(55, 25);
+            cout << "Left board";
+            return false;
+        }
+    }
+    bool check_right_board() {
+        bool collision = true;
+        if (head.pos_x == (BoardPositionX + BoardWidth - 1)) {
+            gotoxy(55, 25);
+            cout << "Right board";
+            return false;
+        }
+    }
+    bool check_top_board() {
+        bool collision = true;
+        if (head.pos_y != (BoardPositionY + 1)) {
+            gotoxy(55, 25);
+            cout << "Top board";
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    bool check_down_board() {
+        bool collision = true;
+        if (head.pos_y != (BoardPositionY + BoardHeight)) {
+            gotoxy(55, 25);
+            cout << "Down board";
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     int get_latency() {
         return latency;
     }
@@ -731,12 +838,27 @@ int main()
     vector<string> list_menu{ "Play", "Settings", "Exit" };
     vector<string> list_menu_Settings{ "Speed" };
 
+    std::ofstream write_record_file("record");
+
+    write_record_file << "5";
+    write_record_file.close();
+    std::ifstream read_record_file("record");
+    string str_record;
+    if (read_record_file.is_open()) {
+        std::getline(read_record_file, str_record);
+        int i_record = std::stoi(str_record);   // Max record of the game
+    }   
+
+    read_record_file.close();
+    
+
     Menu menu(MenuPositionX, MenuPositionY, list_menu, "MAIN MENU");
     Menu menu_settings(MenuPositionX, MenuPositionY, list_menu_Settings, "SETTINGS MENU", "Esc for back to main");
     //GameBoard menu_1(MenuPositionX_1, MenuPositionY_1, MenuWidth_1, MenuHeight_1);
     bool menuFl = true;
     bool menuSettingsFl = false;
     bool gameStarted = false;
+    bool gameEnded = true;
     int speed = 0;
     menu.show();
 
@@ -749,139 +871,179 @@ int main()
     GameBoard& refBoard = snakeBoard;
 
     TSnake snake(5, 5, refBoard);
-
+    //TSnake* snake = new TSnake(5, 5, refBoard);
+        
     TSnake& refSnake = snake;
+
     Food apple(refBoard, refSnake);
+    //Food* apple = new Food(refBoard, refSnake);
     
     char key = ' ';
     char key_1 = ' ';
 
     while (true) {
-        while (menuFl) {
-            if (_kbhit()) {
-                key = _getch();
-                switch (key) {
-                case 72:    // Up arrow
-                    menu.move_up();
-                    break;
-                case 80:    // Down arrow
-                    menu.move_down();
-                    break;
-                case 13:    // Enter
-                    switch (menu.get_selector())
-                    {
-                    case 0: // Play
-                        if (!gameStarted) {
-                            apple.spawn();
-                        }
-                        gameStarted = true;
-                        menuFl = false;
-                        gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
-                        cout << "Score: " << apple.get_cnt();
-                        gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 5);
-                        cout << "Speed: " << snake.get_speed();
+        if (gameEnded) {
+
+            gameEnded = false;
+            gameStarted = true;
+
+            /*GameBoard snakeBoard(BoardPositionX, BoardPositionY, BoardWidth, BoardHeight);
+            GameBoard& refBoard = snakeBoard;
+            TSnake snake(5, 5, refBoard);
+            Food apple(refBoard, refSnake);*/
+
+            snake.create();
+
+            //apple.spawn();
+
+            //delete snake;
+            //delete apple;
+            /*TSnake* snake = new TSnake(5, 5, refBoard);
+            TSnake& refSnake = *snake;
+            Food* apple = new Food(refBoard, refSnake);*/
+            //snake.spawn_XY(10, 10);
+
+
+        }
+        while (gameStarted) {
+            while (menuFl) {
+                if (_kbhit()) {
+                    key = _getch();
+                    switch (key) {
+                    case 72:    // Up arrow
+                        menu.move_up();
                         break;
-                    case 1: // Settings
-                        system("cls");
-                        menu_settings.show();
-                        menuSettingsFl = true;
-                        speed = 0;
-                        gotoxy((MenuPositionX + (MenuWidth - list_menu_Settings[0].size()) / 3) + list_menu_Settings[0].size() + 3, (MenuPositionY + MenuHeight / 2));
-                        cout << snake.get_speed();
-                        while (menuSettingsFl) {
-                            key_1 = _getch();
-                            switch (key_1)
-                            {
-                            case 13:
-                                if (speed > 0 && speed <= 100) {
-                                    snake.set_speed(speed);
-                                }
-                                system("cls");
-                                menu.show();
-                                menuSettingsFl = false;
-                                break;
-                            case 27:
-                                system("cls");
-                                menu.show();
-                                menuSettingsFl = false;
-                                break;
-                            default:
-                                gotoxy((MenuPositionX + (MenuWidth - list_menu_Settings[0].size()) / 3) + list_menu_Settings[0].size() + 3, (MenuPositionY + MenuHeight / 2));
-                                cin >> speed;
-                                break;
+                    case 80:    // Down arrow
+                        menu.move_down();
+                        break;
+                    case 13:    // Enter
+                        switch (menu.get_selector())
+                        {
+                        case 0: // Play
+                            if (!gameStarted) {
+                                apple.spawn();
                             }
+                            gameStarted = true;
+                            menuFl = false;
+                            gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
+                            cout << "Score: " << apple.get_cnt();
+                            gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 5);
+                            cout << "Speed: " << snake.get_speed();
+                            break;
+                        case 1: // Settings
+                            system("cls");
+                            menu_settings.show();
+                            menuSettingsFl = true;
+                            speed = 0;
+                            gotoxy((MenuPositionX + (MenuWidth - list_menu_Settings[0].size()) / 3) + list_menu_Settings[0].size() + 3, (MenuPositionY + MenuHeight / 2));
+                            cout << snake.get_speed();
+                            while (menuSettingsFl) {
+                                key_1 = _getch();
+                                switch (key_1)
+                                {
+                                case 13:
+                                    if (speed > 0 && speed <= 100) {
+                                        snake.set_speed(speed);
+                                    }
+                                    system("cls");
+                                    menu.show();
+                                    menuSettingsFl = false;
+                                    break;
+                                case 27:
+                                    system("cls");
+                                    menu.show();
+                                    menuSettingsFl = false;
+                                    break;
+                                default:
+                                    gotoxy((MenuPositionX + (MenuWidth - list_menu_Settings[0].size()) / 3) + list_menu_Settings[0].size() + 3, (MenuPositionY + MenuHeight / 2));
+                                    cin >> speed;
+                                    break;
+                                }
+                            }
+                            break;
+                        case 2: // Exit
+                            system("cls");
+                            gotoxy(10, 5);
+                            cout << "GAME OVER" << endl;
+                            return 0;
+                            break;
+                        default:
+                            break;
                         }
                         break;
-                    case 2: // Exit
-                        system("cls");
-                        gotoxy(10, 5);
-                        cout << "GAME OVER" << endl;
-                        return 0;
+                    case 27:    // Esc
+                        if (gameStarted) {
+                            system("cls");
+                            snakeBoard.show();
+                            gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
+                            cout << "Score: " << apple.get_cnt();
+                            gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 5);
+                            cout << "Speed: " << snake.get_speed();
+                            menuFl = false;
+                        }
                         break;
                     default:
                         break;
                     }
-                    break;
-                case 27:    // Esc
-                    if (gameStarted) {
-                        system("cls");
-                        snakeBoard.show();
-                        gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
-                        cout << "Score: " << apple.get_cnt();
-                        gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 5);
-                        cout << "Speed: " << snake.get_speed();
-                        menuFl = false;
-                    }
-                    break;
-                default:
-                    break;
                 }
             }
-        }
-        if (!snake.check_all_collision()) {
-            //system("cls");
-            gotoxy(BoardPositionX + BoardPositionX / 2, BoardPositionY + BoardPositionY / 2);
-            cout << "GAME OVER";
-            gameStarted = false;
-            //return 0;
-        }
-        if (apple.check_collision()) {
-            apple.eat();
-            snake.grow();
-            apple.spawn();
-        }
-        while (!_kbhit() && !apple.check_collision() && !snake.check_all_collision()) {
-            if (snake.check_all_collision()) {
+            gotoxy(55, 25);
+            cout << "000000000000000000";
+            if (!snake.check_all_collision()) {
                 //system("cls");
-                gotoxy(BoardPositionX + BoardPositionX / 2, BoardPositionY + BoardPositionY / 2);
-                cout << "GAME OVER";
+                /*gotoxy(BoardPositionX + BoardPositionX / 2, BoardPositionY + BoardPositionY / 2);
+                cout << "GAME OVER";*/
                 gameStarted = false;
-                return 0;
+                gameEnded = true;
+                snake.kill();
+                snakeBoard.end_of_round();
+                //_getch();
+                break;
+                //return 0;
             }
-            snake.GO();
-        }
-        if (_kbhit()) {
-            key = _getch();
-            switch (key) {
-            case 72:
-                snake.move_up();
-                break;
-            case 80:
-                snake.move_down();
-                break;
-            case 75:
-                snake.move_left();
-                break;
-            case 77:
-                snake.move_right();
-                break;
-            case 27:
-                system("cls");
-                menu.show();
-                menuFl = true;
-                break;
-            default:
-                break;
+            if (apple.check_collision()) {
+                apple.eat();
+                snake.grow();
+                apple.spawn();
+            }
+            //while (!_kbhit() && !apple.check_collision() && !snake.check_all_collision()) {
+            //    if (snake.check_all_collision()) {
+            //        //system("cls");
+            //        gotoxy(BoardPositionX + BoardPositionX / 2, BoardPositionY + BoardPositionY / 2);
+            //        cout << "GAME OVER";
+            //        gameStarted = false;
+            //        return 0;
+            //    }
+
+            /*}*/
+            if (snake.alive) {
+                if (_kbhit()) {
+                    key = _getch();
+                    switch (key) {
+                    case 72:
+                        snake.move_up();
+                        break;
+                    case 80:
+                        snake.move_down();
+                        break;
+                    case 75:
+                        snake.move_left();
+                        break;
+                    case 77:
+                        snake.move_right();
+                        break;
+                    case 27:
+                        system("cls");
+                        menu.show();
+                        menuFl = true;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else {
+                    snake.GO();
+                }
             }
         }
     }
