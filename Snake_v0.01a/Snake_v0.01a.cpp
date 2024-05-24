@@ -4,15 +4,17 @@
 //#define DEBUG // Убрать по готовности
 //#define MENU
 
-// Исправить check_right() по аналогии с check_left()
-
+// Сделать рейтинг Топ-3
+// + Координаты появления яблока на поле не должны совпадать с координатами змеи
+// + Сделать восстановление рамок игрового поля после проигрыша
 // + Сделать snake параметр скорости Speed вместо прямой задержки Latency
 // + Добавить заголовки в меню
 // + Добавить описание настройки в меню Settings
-// Добавить возможность проигрыша в игре
-// Добавить возможность после проигрыша начать игру сначала
-// Добавить сохранение рекордов в файл
+// + Добавить возможность проигрыша в игре
+// + Добавить возможность после проигрыша начать игру сначала
+// + Добавить сохранение рекордов в файл
 // Рефакторинг кода
+// Дебаг
 
 #include <iostream>
 #include <fstream>
@@ -51,7 +53,7 @@ void gotoxy(int _x, int _y) {
     _POSITION.Y = _y;
     SetConsoleCursorPosition(_HCONSOLE, _POSITION);
 }
-
+class Food;
 class Board {
 public:
     Board(size_t _x, size_t _y, size_t _width, size_t _height)
@@ -273,11 +275,10 @@ public:
     void set_value(size_t col, size_t row, int value) {
         set(row, col, value);
     }
-    void end_of_round() {
-        gotoxy(BoardPositionX + (BoardWidth / 2) - 5, BoardPositionY + (BoardHeight / 2) - 1);
-        cout << "GAME OVER";
+    void end_of_round(Food _apple, GameBoard& _refBoard);
+    vector<int>& get_vec_board() {
+        return iboard;
     }
-private:
     Board init() {
         for (size_t i = 0; i != (width * height); ++i) {
             iboard.push_back(0);
@@ -300,11 +301,11 @@ private:
         iboard[(width * height) - 1] = 6;
         return *this;
     }
+private:
     GameBoard set(size_t row, size_t col, int value) {
         iboard[(row - 1) * width + (col - 1)] = value;
         return *this;
-    }
-    
+    }    
 };
 
 class Snake {
@@ -412,8 +413,8 @@ struct SnakeElement {
 
 class TSnake {
 public:
-    TSnake(size_t _x, size_t _y, GameBoard& _refBoard)
-        : length(5), refBoard(_refBoard) {
+    TSnake(size_t _x, size_t _y, GameBoard& _refBoard, size_t _length)
+        : length(_length), length_start(_length), refBoard(_refBoard) {
         //snake.push_back(head);
         /*snake.push_back({ '#', head.pos_x + 1, head.pos_y });
         snake.push_back({ '#', head.pos_x + 2, head.pos_y });
@@ -466,6 +467,7 @@ public:
         for (size_t i = 1; i <= length; ++i) {
             snake.push_back({ '#', head.pos_x + i, head.pos_y });
         }
+        direction = 1;
         alive = true;
         latency = 1000 / speed;
     }
@@ -504,9 +506,9 @@ public:
             direction = 1;
             Sleep(latency);
         }
-        else {
+       /* else {
             head.pos_x;
-        }
+        }*/
     }
     void spawn() {
         show();
@@ -524,6 +526,7 @@ public:
         head.pos_y = BoardPositionY + BoardHeight / 2;*/
         /*head.pos_x = 0;
         head.pos_y = 0;*/
+        length = length_start;
         alive = false;
     }
     void move() {
@@ -580,6 +583,7 @@ public:
     vector<SnakeElement> snake;
     SnakeElement head;
     size_t length;
+    size_t length_start;
     GameBoard& refBoard;
     bool alive;
     
@@ -663,6 +667,21 @@ private:
                 collision = true;
             }
         }*/
+        bool collision = true;
+        bool thow_first_fl = true;
+        for (auto& c : snake) {
+            if (thow_first_fl) {
+                thow_first_fl = false;
+                continue;
+            }
+            if ((head.pos_x + 1) == c.pos_x && head.pos_y == c.pos_y) {
+                collision = false;
+                break;
+            }
+            else {
+                collision = true;
+            }
+        }
         if ((head.pos_x != (BoardPositionX + BoardWidth - 1)) && ((head.pos_x + 1) != snake[0].pos_x) && check_tail_collision()) {
             return true;
         }
@@ -761,7 +780,7 @@ private:
 
 class Food {
 public:
-    Food(GameBoard& _refBoard, TSnake& _refSnake) 
+    Food(GameBoard& _refBoard, TSnake& _refSnake)
         : refBoard(_refBoard), refSnake(_refSnake), pos_x(0), pos_y(0) {
         start_X = BoardPositionX + 2;
         end_X = BoardPositionX + BoardWidth - 2;
@@ -784,10 +803,12 @@ public:
 #endif
         ++counter;
         gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
-        cout << "Score: " << counter;
+        cout << "Score: " << counter << " " << exist_on_Board;
+        exist_on_Board = false;
     }
     bool check_collision() {
-        if (refSnake.get_posX() == pos_x && refSnake.get_posY() == pos_y) {
+        if (refSnake.get_posX() == pos_x && refSnake.get_posY() == pos_y &&
+            refSnake.head.pos_x == pos_x && refSnake.head.pos_y == pos_y) {
             return true;
         }
         else {
@@ -797,10 +818,17 @@ public:
     int get_cnt() {
         return counter;
     }
+    void reset_cnt() {
+        counter = 0;
+    }
+    bool get_status() {
+        return exist_on_Board;
+    }
 private:
     void show() {
         refBoard.set_value(pos_x, pos_y, 8);
         refBoard.show();
+        exist_on_Board = true;
 #ifdef DEBUG
         refBoard.show_debug();
 #endif
@@ -817,8 +845,41 @@ private:
     size_t pos_y;
     GameBoard& refBoard;
     TSnake& refSnake;
+    bool exist_on_Board = false;
     static size_t counter;
 };
+
+void GameBoard::end_of_round(Food _apple, GameBoard& _refBoard) {
+    gotoxy(BoardPositionX + (BoardWidth / 2) - 5, BoardPositionY + (BoardHeight / 2) - 1);
+    cout << "GAME OVER";
+    int i_record = 0;
+    int cur_record = _apple.get_cnt();
+    string rec_name;
+    std::ifstream read_record_file("record");
+    string str_record;
+    if (read_record_file.is_open()) {
+        //std::getline(read_record_file, str_record);
+        read_record_file >> rec_name >> str_record;
+        i_record = std::stoi(str_record);   // Max record of the game
+    }
+    gotoxy(BoardPositionX + (BoardWidth / 2) - 10, BoardPositionY + (BoardHeight / 2) - 1 + 3);
+    cout << "Max record: " << rec_name << " - " << i_record;
+    gotoxy(BoardPositionX + (BoardWidth / 2) - 10, BoardPositionY + (BoardHeight / 2) - 1 + 4);
+    cout << "Your record: " << cur_record << endl;
+    read_record_file.close();
+    if (cur_record > i_record) {
+        gotoxy(BoardPositionX + (BoardWidth / 2) - 10, BoardPositionY + (BoardHeight / 2) - 1 + 5);
+        cout << "Enter your name: ";
+        cin >> rec_name;
+        std::ofstream write_record_file("record");
+        write_record_file << rec_name << " " << cur_record;
+        write_record_file.close();
+    }
+    
+    _apple.reset_cnt();
+    _refBoard.get_vec_board().clear();
+    _refBoard.init();
+}
 
 size_t Food::counter = 0;
 
@@ -838,20 +899,6 @@ int main()
     vector<string> list_menu{ "Play", "Settings", "Exit" };
     vector<string> list_menu_Settings{ "Speed" };
 
-    std::ofstream write_record_file("record");
-
-    write_record_file << "5";
-    write_record_file.close();
-    std::ifstream read_record_file("record");
-    string str_record;
-    if (read_record_file.is_open()) {
-        std::getline(read_record_file, str_record);
-        int i_record = std::stoi(str_record);   // Max record of the game
-    }   
-
-    read_record_file.close();
-    
-
     Menu menu(MenuPositionX, MenuPositionY, list_menu, "MAIN MENU");
     Menu menu_settings(MenuPositionX, MenuPositionY, list_menu_Settings, "SETTINGS MENU", "Esc for back to main");
     //GameBoard menu_1(MenuPositionX_1, MenuPositionY_1, MenuWidth_1, MenuHeight_1);
@@ -870,9 +917,9 @@ int main()
 #endif
     GameBoard& refBoard = snakeBoard;
 
-    TSnake snake(5, 5, refBoard);
+    TSnake snake(5, 5, refBoard, 3);
     //TSnake* snake = new TSnake(5, 5, refBoard);
-        
+    //    
     TSnake& refSnake = snake;
 
     Food apple(refBoard, refSnake);
@@ -890,9 +937,12 @@ int main()
             /*GameBoard snakeBoard(BoardPositionX, BoardPositionY, BoardWidth, BoardHeight);
             GameBoard& refBoard = snakeBoard;
             TSnake snake(5, 5, refBoard);
-            Food apple(refBoard, refSnake);*/
+            TSnake& refSnake = snake;*/
+            //Food apple(refBoard, refSnake);
 
             snake.create();
+
+            
 
             //apple.spawn();
 
@@ -920,15 +970,18 @@ int main()
                         switch (menu.get_selector())
                         {
                         case 0: // Play
-                            if (!gameStarted) {
+                            /*if (!gameStarted) {
                                 apple.spawn();
-                            }
+                            }*/
                             gameStarted = true;
                             menuFl = false;
                             gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 3);
                             cout << "Score: " << apple.get_cnt();
                             gotoxy(BoardPositionX + BoardWidth + 3, BoardPositionY + 5);
                             cout << "Speed: " << snake.get_speed();
+                            if (!apple.get_status()) {
+                                apple.spawn();
+                            }
                             break;
                         case 1: // Settings
                             system("cls");
@@ -987,8 +1040,6 @@ int main()
                     }
                 }
             }
-            gotoxy(55, 25);
-            cout << "000000000000000000";
             if (!snake.check_all_collision()) {
                 //system("cls");
                 /*gotoxy(BoardPositionX + BoardPositionX / 2, BoardPositionY + BoardPositionY / 2);
@@ -996,8 +1047,9 @@ int main()
                 gameStarted = false;
                 gameEnded = true;
                 snake.kill();
-                snakeBoard.end_of_round();
-                //_getch();
+                snakeBoard.end_of_round(apple, refBoard);
+                _getch();
+                apple.spawn();
                 break;
                 //return 0;
             }
