@@ -1,6 +1,7 @@
 Snake_v0.01a by Shadow
 The snake game was created for the purpose of learning and learning the C++ language. 
-The console version.
+The console version. 
+The game uses a stack rather than dynamic memory due to simplicity. There is no need to use dynamic memory.
 After launching the file, a menu opens with 4 items: "Game", "Settings", "Rating" and "Exit".
 You can change the speed of the game in the settings. The speed does not increase automatically.
 In the Rating section, you can view the Top-3 records that are saved to the "record" file in the game folder.
